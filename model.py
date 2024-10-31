@@ -1,16 +1,30 @@
-from pydantic import BaseModel, ConfigDict
+from datetime import datetime
+from pydantic import BaseModel, ConfigDict, field_validator, Field
+from humps import camelize
+
+def to_camel(str):
+    return camelize(str)
+
 
 class Diploma(BaseModel):
     nome_aluno: str
     nacionalidade: str
     estado: str
-    nascimento: str
-    rg: str
-    conclusao: str
+    data_nascimento: str
+    documento: str
+    data_conclusao: str
     curso: str
     carga_horaria: str
-    emissao: str
-    nome_ass: str
-    cargo_ass: str
+    data_emissao: str = Field(default_factory=lambda: datetime.now().strftime("%d/%m/%Y"))
+    nome_assinatura: str
+    cargo: str
 
-    model_config = ConfigDict(extra='allow')
+    @field_validator("data_emissao", "data_conclusao", "data_nascimento", mode="before")
+    def validate_date_format(cls, value):
+        try:
+            dt = datetime.strptime(value, "%d/%m/%Y")
+            return dt.strftime("%d/%m/%Y")
+        except ValueError:
+            raise ValueError("Date must be in format dd/mm/yyyy")
+
+    model_config = ConfigDict(extra='allow', alias_generator=to_camel)
