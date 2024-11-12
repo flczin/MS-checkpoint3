@@ -20,7 +20,7 @@ def get_collection():
 
 @app.post("/generate_diploma")
 def generate_diploma(data: Diploma, collection=Depends(get_collection)):
-    key = str(uuid.uuid3(uuid.NAMESPACE_DNS, f"{data.nome_aluno}{data.curso}"))
+    key = str(uuid.uuid3(uuid.NAMESPACE_DNS, f"{data.nome}{data.curso}"))
     app_dir = os.getcwd()
     path = os.path.join(app_dir, f"diplomas/{key}.pdf")
     data.path = path   

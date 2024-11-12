@@ -7,7 +7,7 @@ def to_camel(str):
 
 
 class Diploma(BaseModel):
-    nome_aluno: str
+    nome: str
     nacionalidade: str
     estado: str
     data_nascimento: str
