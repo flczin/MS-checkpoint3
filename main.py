@@ -19,31 +19,40 @@ def get_collection():
 
 
 @app.post("/generate_diploma")
-def generate_diploma(data: Diploma, collection=Depends(get_collection)):
+def generate_diploma(data: Diploma):
     key = str(uuid.uuid3(uuid.NAMESPACE_DNS, f"{data.nome}{data.curso}"))
     app_dir = os.getcwd()
     path = os.path.join(app_dir, f"diplomas/{key}.pdf")
     data.path = path   
-    possible = cache.get(key)
+    data.key = key
+    print(key)
+    task = celery_worker.send_task("generate_diploma", args=[data.model_dump()], task_id=key)
+    
+    return {"key": task.id}
+    
+        
+@app.get("/retrieve_diploma/{uuid}")
+def retrieve_diploma(uuid, collection=Depends(get_collection)):
+    possible = cache.get(uuid)
     if possible:
         print("cache")
         return FileResponse(path=possible, media_type='application/pdf',
-                        status_code=200, content_disposition_type="attachment", filename=f"{key}.pdf")
+                        status_code=200, content_disposition_type="attachment", filename=f"{uuid}.pdf")
+    
+    db = collection.find_one({"key": uuid})
+    if db:
+        cache.set(uuid, db["path"], ex=60)
+        print("db")
+        return FileResponse(path=db["path"], media_type='application/pdf',
+                status_code=200, content_disposition_type="attachment", filename=f"{uuid}.pdf") 
+    
+    result = AsyncResult(id=uuid, app=celery_worker)
+    if result.state != "SUCCESS":
+        return {"File still being processed or do not exist"}
     else:
-        db = collection.find_one({"path": data.path})
-        if db:
-            cache.set(key, path, ex=60)
-            print("db")
-            return FileResponse(path=db["path"], media_type='application/pdf',
-                        status_code=200, content_disposition_type="attachment", filename=f"{key}.pdf")
-        else:
-            task = celery_worker.send_task("generate_diploma", args=[data.model_dump()])
-            task_result = AsyncResult(id=task.id, app=celery_worker).get()
-            collection.insert_one(data.model_dump())
-            print("worker")
-            return FileResponse(path=task_result["path"], media_type='application/pdf',
-                        status_code=200, content_disposition_type="attachment", filename=f"{key}.pdf")
-        
+        return FileResponse(path=result.result["path"], media_type='application/pdf',
+                        status_code=200, content_disposition_type="attachment", filename=f"{uuid}.pdf")
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
