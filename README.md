@@ -1,9 +1,9 @@
 # Instruções
 Clone o repositorio e execute o `docker-compose`. Acesse [localhost](http://localhost:8000/docs) na porta 8000 no caminho /docs para acessar o swagger.
-# Exemplo curl
+# Exemplo post curl
+Este curl retorna uma key que será utlizada no endpoint de get.
 ```
 curl -X 'POST' \
-  -O \
   'http://localhost:8000/generate_diploma' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
@@ -20,4 +20,12 @@ curl -X 'POST' \
   "nomeAssinatura": "Marcelo",
   "cargo": "Diretor"
 }'
+```
+# Exemplo get curl
+Este curl retorna o arquivo se ele já foi processado ou "File still being processed or do not exist" se o arquivo na existir ou ainda estiver sendo processado pelo worker.
+```
+curl -X 'GET' \
+  -O \
+  'http://localhost:8000/retrieve_diploma/3427ca5b-60b2-34e3-b4ae-64403b02ea33' \
+  -H 'accept: application/json'
 ```
